@@ -99,7 +99,8 @@ This preserves football realism while maintaining analytical comparability.
 
 - Python: Pandas, NumPy
 - SQLAlchemy + SQLite
-- Matplotlib, Seaborn, Plotly
+- Matplotlib, Seaborn
+- Plotly (`graph_objects`) + Plotly Offline (`plotly.offline`)
 - adjustText
 
 ## How to Run
@@ -110,6 +111,8 @@ This preserves football realism while maintaining analytical comparability.
 ```bash
 pip install pandas sqlalchemy matplotlib seaborn numpy adjustText plotly
 ```
+
+Note: Plotly is initialized in offline mode inside the notebook for interactive local rendering.
 
 3. Run `pipeline.ipynb` from the first cell to the last.
 4. The `premier_league.db` database will be created locally.
