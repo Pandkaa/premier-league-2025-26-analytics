@@ -109,10 +109,11 @@ This preserves football realism while maintaining analytical comparability.
 2. Install dependencies:
 
 ```bash
-pip install pandas sqlalchemy matplotlib seaborn numpy adjustText plotly
+pip install pandas sqlalchemy matplotlib seaborn numpy adjustText plotly kaleido
 ```
 
 Note: Plotly is initialized in offline mode inside the notebook for interactive local rendering.
+For GitHub notebook preview, `kaleido` enables static image export of Plotly charts (for example Sankey).
 
 3. Run `pipeline.ipynb` from the first cell to the last.
 4. The `premier_league.db` database will be created locally.
