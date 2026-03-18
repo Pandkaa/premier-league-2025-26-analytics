@@ -4,6 +4,8 @@ This project presents my complete live-season Premier League analytics workflow:
 
 Data source: https://www.football-data.co.uk/
 
+Data snapshot date: 17.03.2026.
+
 ## What I Chose and Why
 
 I chose a notebook + SQL approach because:
