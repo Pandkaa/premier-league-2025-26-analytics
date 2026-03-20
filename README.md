@@ -4,7 +4,7 @@ This project presents my complete live-season Premier League analytics workflow:
 
 Data source: https://www.football-data.co.uk/
 
-Data snapshot date: 17.03.2026.
+Data is refreshed automatically every Tuesday via GitHub Actions.
 
 ## What I Chose and Why
 
@@ -119,6 +119,12 @@ For GitHub notebook preview, `kaleido` enables static image export of Plotly cha
 
 3. Run `pipeline.ipynb` from the first cell to the last.
 4. The `premier_league.db` database will be created locally.
+
+## Automated Weekly Update
+
+- A GitHub Actions workflow runs every Tuesday at 08:00 UTC.
+- It executes `pipeline.ipynb` and commits updated notebook output when new data is available.
+- You can also trigger the workflow manually using `workflow_dispatch`.
 
 ## Author
 

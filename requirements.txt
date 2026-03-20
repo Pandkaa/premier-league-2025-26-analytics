@@ -1,0 +1,11 @@
+pandas
+sqlalchemy
+matplotlib
+seaborn
+numpy
+adjustText
+plotly
+kaleido
+jupyter
+nbconvert
+ipykernel
