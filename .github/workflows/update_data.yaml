@@ -31,5 +31,8 @@ jobs:
         git config --global user.name 'GitHub Action Bot'
         git config --global user.email 'action@github.com'
         git add pipeline.ipynb
+        if [ -d assets/images ]; then
+          git add assets/images/*.png 2>/dev/null || true
+        fi
         git commit -m "Automated update: fetched latest Premier League data" || exit 0
         git push

@@ -1,109 +1,108 @@
 # Premier League 2025/2026 Live Analytics Pipeline
 
-This project presents my complete live-season Premier League analytics workflow: from raw match data, through ETL and SQL, to scouting-oriented insights.
+## Scope and Objective
 
-Data source: https://www.football-data.co.uk/
+This notebook analyzes the live 2025/2026 Premier League season, where teams can have different numbers of matches played.
 
 Data is refreshed automatically every Tuesday via GitHub Actions.
 
-## What I Chose and Why
+Data source: https://www.football-data.co.uk/
 
-I chose a notebook + SQL approach because:
-- it clearly shows the full analytical workflow step by step,
-- transformations are transparent and auditable,
-- output tables can be reused directly in downstream analysis.
+## Data Ingestion
 
-I chose a live season (2025/2026) because it is both more challenging and more realistic.
-In a live season, teams may have played a different number of matches, so per-match metrics and a fair ranking approach are essential.
+Load the source CSV into df_raw and inspect the first rows as a structural sanity check (columns, datatypes, missingness risk).
 
-## How It Works
+## Cleaning and Match Outcome Features
 
-1. Load data from `E0-2.csv`.
-2. Clean and standardize columns (goals, shots, corners, cards, etc.).
-3. Create key features:
-- `HomePoints`, `AwayPoints`
-- `HalfTimeResult`
-4. Map team names to `TeamID`.
-5. Aggregate home and away statistics into the `Standings` table.
-6. Persist results to SQLite (`Matches`, `Teams`, `Standings`).
-7. Run SQL and visual analysis across four analytical pillars.
+Keep rows complete for columns used downstream, then derive outcome features for modeling and flow analysis.
 
-## Why These 4 Analyses
+Created fields:
+- HomePoints and AwayPoints from full-time score
+- HalfTimeResult as the halftime match-state signal
 
-### 1) Offensive Profiling (Quadrant)
-What it measures:
-- `AvgShots` (volume),
-- `ConversionRate` (finishing efficiency),
-- `AvgCorners` (territorial pressure).
+## Team Mapping and Table Logic
 
-Why I chose it:
-- combines attacking quantity and quality,
-- helps compare offensive team profiles.
+Map clubs to stable TeamID, reshape matches to team-centric records, and build standings.
 
-How it works:
-- unions home and away records,
-- calculates metrics per team,
-- reference lines weighted by matches played.
+Two ranking views are kept on purpose:
+- Position: official table (Points, GoalDifference, GoalsFor)
+- PositionPPG: fair live-season ranking for unequal games played
 
-### 2) Pythagorean Expectation (xPts vs Actual)
-What it measures:
-- whether points are aligned with process quality (GF/GA),
-- `Luck = ActualPoints - xPts`.
+Tier is assigned from PositionPPG for comparability in ongoing-season analysis.
 
-Why I chose it:
-- the table alone can be misleading during a live season,
-- this model helps separate outcomes from underlying performance.
+## Standings Aggregation
 
-How it works:
-- base model uses `GoalsFor` vs `GoalsAgainst` (exponent 1.3),
-- team draw rate is shrunk toward the league average:
+Convert match rows into season team totals by combining home and away contributions, then calculate both total and per-game metrics used by later analyses.
 
-$$
-p_{draw,team} = \frac{Draws + k\cdot p_{draw,league}}{Played + k}
-$$
+## SQLite Persistence
 
-- in this project, `k = 6`.
-- rationale: with roughly 30+ matches played per team, `k = 6` provides moderate shrinkage (stability against noise) without overpowering each team's observed draw profile.
+Persist Matches, Teams, and Standings to SQLite so all SQL-based EDA runs on a consistent and reproducible snapshot.
 
-### 3) Halftime -> Fulltime Flow (Sankey)
-What it measures:
-- transitions from halftime state to fulltime result.
+## Offensive Profiling: Volume, Finishing, and Set-Piece Pressure
 
-Why I chose it:
-- gives a fast view of when matches are most volatile,
-- supports conclusions about game management.
+This chart combines three attacking indicators:
+- AvgShots: chance volume per team-match
+- ConversionRate: total goals divided by total shots
+- AvgCorners: territorial pressure proxy
 
-How it works:
-- groups by `HalfTimeResult` and `HomePoints`,
-- maps states into Sankey nodes.
+Because the season is live, per-match metrics are used to keep teams comparable despite unequal games played.
 
-### 4) Locker Room Impact (2nd-half net goals)
-What it measures:
-- average team net goal difference after halftime.
+![Offensive Profiling](assets/images/offensive_profiling.png)
 
-Why I chose it:
-- strong proxy for coaching adaptation and second-half management.
+### So What?
+- Teams above both reference lines pair shot volume with efficient finishing
+- High volume but low conversion suggests shot quality or finishing issues
+- Low volume but high conversion often indicates selective, transition-led attacks
 
-How it works:
-- calculates home and away perspectives separately,
-- combines both perspectives,
-- computes average per team.
+## Pythagorean Expectation: Expected vs Actual Points
 
-## Why Two Table Rankings
+This model estimates expected points (xPts) from goals for/against, then compares that estimate with actual points.
 
-I intentionally keep two rankings:
-- `Position`: official league logic (Points, GD, GF),
-- `PositionPPG`: fairness ranking for a live season (unequal matches played).
+In this version, draw probability is team-specific and shrinked toward league average to reduce small-sample noise in a live season.
 
-This preserves football realism while maintaining analytical comparability.
+![Pythagorean Expectation](assets/images/pythagorean_expectation.png)
+
+### So What?
+- Positive Luck: points overperformance versus goal-based expectation
+- Negative Luck: potential underperformance versus underlying process
+- Useful for separating table position from true performance trend
+
+## Halftime to Fulltime Flow (Home Matches)
+
+This Sankey aggregates league-wide transitions from halftime state to fulltime result in home matches.
+
+State mapping:
+- HalfTimeResult: 1 (home lead), 0 (draw), -1 (home trail)
+- HomePoints: 3 (home win), 1 (draw), 0 (home loss)
+
+![Halftime to Fulltime Flow](assets/images/halftime_fulltime_flow.png)
+
+### So What?
+- HT Draw is usually the highest-volatility state
+- HT Lead and HT Trail are relatively sticky
+- For tactical coaching insights, replicate this flow at single-team level
+
+## Locker Room Impact: Second-Half Net Goal Differential
+
+This metric isolates post-halftime performance by averaging each team's net second-half goal difference per match.
+
+SQL logic: compute net second-half differential from home and away perspectives, union both, then average by team.
+
+![Locker Room Impact](assets/images/locker_room_impact.png)
+
+### So What?
+- Positive values indicate stronger halftime adaptation and game management
+- Negative values may signal fitness drop-off, tactical rigidity, or bench-impact issues
+- Useful for scouting coaching profile and in-game adjustment quality
 
 ## Stack
 
-- Python: Pandas, NumPy
+- Python: pandas, numpy
 - SQLAlchemy + SQLite
-- Matplotlib, Seaborn
-- Plotly (`graph_objects`) + Plotly Offline (`plotly.offline`)
+- matplotlib, seaborn
+- plotly (graph_objects) + plotly offline
 - adjustText
+- kaleido
 
 ## How to Run
 
@@ -111,20 +110,16 @@ This preserves football realism while maintaining analytical comparability.
 2. Install dependencies:
 
 ```bash
-pip install pandas sqlalchemy matplotlib seaborn numpy adjustText plotly kaleido
+pip install -r requirements.txt
 ```
 
-Note: Plotly is initialized in offline mode inside the notebook for interactive local rendering.
-For GitHub notebook preview, `kaleido` enables static image export of Plotly charts (for example Sankey).
-
-3. Run `pipeline.ipynb` from the first cell to the last.
-4. The `premier_league.db` database will be created locally.
+3. Run pipeline.ipynb from the first cell to the last.
 
 ## Automated Weekly Update
 
 - A GitHub Actions workflow runs every Tuesday at 08:00 UTC.
-- It executes `pipeline.ipynb` and commits updated notebook output when new data is available.
-- You can also trigger the workflow manually using `workflow_dispatch`.
+- It executes pipeline.ipynb and commits updated notebook output when new data is available.
+- You can also trigger the workflow manually using workflow_dispatch.
 
 ## Author
 
